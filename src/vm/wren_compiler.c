@@ -1953,6 +1953,51 @@ static void list(Compiler* compiler, bool canAssign)
   consume(compiler, TOKEN_RIGHT_BRACKET, "Expect ']' after list elements.");
 }
 
+static void finishMap(Compiler* compiler) {
+  // This method starts after the first key and colon, but before we parse the
+  // first value. Start by parsing the first value and adding it.
+  ignoreNewlines(compiler);
+  expression(compiler);
+  callMethod(compiler, 2, "addCore_(_,_)", 13);
+
+  while (match(compiler, TOKEN_COMMA)) {
+    ignoreNewlines(compiler);
+
+    if (peek(compiler) == TOKEN_RIGHT_BRACE) {
+      break;
+    }
+
+    // Parse the key
+    parsePrecedence(compiler, PREC_UNARY);
+    consume(compiler, TOKEN_COLON, "Expect ':' after map key.");
+    ignoreNewlines(compiler);
+
+    expression(compiler);
+    callMethod(compiler, 2, "addCore_(_,_)", 13);
+  }
+}
+
+static void finishSet(Compiler* compiler) {
+  // This method starts after the first key, but before we actually add the
+  // first element to the map. Explicitly add the first here.
+  emitOp(compiler, CODE_TRUE);
+  callMethod(compiler, 2, "addCore_(_,_)", 13);
+
+  while (match(compiler, TOKEN_COMMA)) {
+    ignoreNewlines(compiler);
+
+    if (peek(compiler) == TOKEN_RIGHT_BRACE) {
+      break;
+    }
+
+    // Parse the key
+    parsePrecedence(compiler, PREC_UNARY);
+
+    emitOp(compiler, CODE_TRUE);
+    callMethod(compiler, 2, "addCore_(_,_)", 13);
+  }
+}
+
 // A map literal.
 static void map(Compiler* compiler, bool canAssign)
 {
@@ -1960,24 +2005,23 @@ static void map(Compiler* compiler, bool canAssign)
   loadCoreVariable(compiler, "Map");
   callMethod(compiler, 0, "new()", 5);
 
-  // Compile the map elements. Each one is compiled to just invoke the
-  // subscript setter on the map.
-  do
-  {
-    ignoreNewlines(compiler);
+  ignoreNewlines(compiler);
 
-    // Stop if we hit the end of the map.
-    if (peek(compiler) == TOKEN_RIGHT_BRACE) break;
-
-    // The key.
+  // Dispatch into map or set parsing based on the separator after the first key
+  // If the map is empty this isn't relevant so skip it
+  if (peek(compiler) != TOKEN_RIGHT_BRACE) {
+    // Parse the key
     parsePrecedence(compiler, PREC_UNARY);
-    consume(compiler, TOKEN_COLON, "Expect ':' after map key.");
-    ignoreNewlines(compiler);
 
-    // The value.
-    expression(compiler);
-    callMethod(compiler, 2, "addCore_(_,_)", 13);
-  } while (match(compiler, TOKEN_COMMA));
+    // If we see a comma or the end of the map, this must be a set
+    if (peek(compiler) == TOKEN_COMMA || peek(compiler) == TOKEN_RIGHT_BRACE) {
+      finishSet(compiler);
+    } else {
+      consume(compiler, TOKEN_COLON, "Expect ':' after map key.");
+
+      finishMap(compiler);
+    }
+  }
 
   // Allow newlines before the closing '}'.
   ignoreNewlines(compiler);
