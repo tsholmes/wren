@@ -1953,17 +1953,20 @@ static void list(Compiler* compiler, bool canAssign)
   consume(compiler, TOKEN_RIGHT_BRACKET, "Expect ']' after list elements.");
 }
 
-static void finishMap(Compiler* compiler) {
+static void finishMap(Compiler* compiler)
+{
   // This method starts after the first key and colon, but before we parse the
   // first value. Start by parsing the first value and adding it.
   ignoreNewlines(compiler);
   expression(compiler);
   callMethod(compiler, 2, "addCore_(_,_)", 13);
 
-  while (match(compiler, TOKEN_COMMA)) {
+  while (match(compiler, TOKEN_COMMA))
+  {
     ignoreNewlines(compiler);
 
-    if (peek(compiler) == TOKEN_RIGHT_BRACE) {
+    if (peek(compiler) == TOKEN_RIGHT_BRACE)
+    {
       break;
     }
 
@@ -1977,7 +1980,8 @@ static void finishMap(Compiler* compiler) {
   }
 }
 
-static void finishSet(Compiler* compiler) {
+static void finishSet(Compiler* compiler)
+{
   // This method starts after the first key, but before we actually add the
   // first element to the map. Explicitly add the first here.
   emitOp(compiler, CODE_TRUE);
@@ -1986,7 +1990,8 @@ static void finishSet(Compiler* compiler) {
   while (match(compiler, TOKEN_COMMA)) {
     ignoreNewlines(compiler);
 
-    if (peek(compiler) == TOKEN_RIGHT_BRACE) {
+    if (peek(compiler) == TOKEN_RIGHT_BRACE)
+    {
       break;
     }
 
@@ -2009,14 +2014,18 @@ static void map(Compiler* compiler, bool canAssign)
 
   // Dispatch into map or set parsing based on the separator after the first key
   // If the map is empty this isn't relevant so skip it
-  if (peek(compiler) != TOKEN_RIGHT_BRACE) {
+  if (peek(compiler) != TOKEN_RIGHT_BRACE)
+  {
     // Parse the key
     parsePrecedence(compiler, PREC_UNARY);
 
     // If we see a comma or the end of the map, this must be a set
-    if (peek(compiler) == TOKEN_COMMA || peek(compiler) == TOKEN_RIGHT_BRACE) {
+    if (peek(compiler) == TOKEN_COMMA || peek(compiler) == TOKEN_RIGHT_BRACE)
+    {
       finishSet(compiler);
-    } else {
+    }
+    else
+    {
       consume(compiler, TOKEN_COLON, "Expect ':' after map key.");
 
       finishMap(compiler);
